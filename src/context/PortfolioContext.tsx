@@ -104,7 +104,6 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString().split("T")[0],
     };
-    persist((prev) => [...prev, newCoin]);
     setCoins((prev) => {
       const updated = [...prev, newCoin];
       saveCoins(updated);
