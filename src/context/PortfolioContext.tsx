@@ -18,7 +18,7 @@ export interface Coin {
 
 interface PortfolioContextType {
   coins: Coin[];
-  addCoin: (coin: Omit<Coin, "id" | "createdAt">) => void;
+  addCoin: (coin: { name: string; symbol: string; image: string | null; entries: Omit<CoinEntry, "id">[] }) => void;
   updateCoin: (id: string, coin: Partial<Coin>) => void;
   deleteCoin: (id: string) => void;
   addEntry: (coinId: string, entry: Omit<CoinEntry, "id">) => void;
