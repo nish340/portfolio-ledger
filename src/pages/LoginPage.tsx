@@ -4,19 +4,25 @@ import { useNavigate } from "react-router-dom";
 import { Lock, Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
+  const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(password)) {
+    setError("");
+    setLoading(true);
+    try {
+      await login(email, password);
       navigate("/");
-    } else {
-      setError("Invalid password");
-      setPassword("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,16 +34,25 @@ const LoginPage = () => {
             <Lock className="h-8 w-8 text-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Portfolio Ledger</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Enter your password to continue</p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setError(""); }}
+            placeholder="Email"
+            required
+            className="w-full rounded-xl border border-border bg-card px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
           <div className="relative">
             <input
               type={showPass ? "text" : "password"}
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(""); }}
               placeholder="Password"
+              required
               className="w-full rounded-xl border border-border bg-card px-4 py-3.5 pr-12 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
             <button
@@ -51,14 +66,15 @@ const LoginPage = () => {
           {error && <p className="text-sm text-danger">{error}</p>}
           <button
             type="submit"
-            className="w-full rounded-xl py-3.5 font-semibold text-foreground gradient-primary transition-opacity hover:opacity-90"
+            disabled={loading}
+            className="w-full rounded-xl py-3.5 font-semibold text-foreground gradient-primary transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            Unlock
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Default password: admin123
+          Default: admin@example.com / Admin@123456
         </p>
       </div>
     </div>

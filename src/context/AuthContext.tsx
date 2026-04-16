@@ -1,50 +1,41 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
+import { authApi } from "@/lib/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (password: string) => boolean;
+  email: string;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  changePassword: (oldPass: string, newPass: string) => boolean;
-  username: string;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const PASS_KEY = "app_password";
-const DEFAULT_PASS = "admin123";
-const AUTH_KEY = "app_auth";
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem(AUTH_KEY) === "true";
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem("jwt_token"));
+  const [email, setEmail] = useState(() => localStorage.getItem("user_email") || "");
 
-  const getPassword = () => localStorage.getItem(PASS_KEY) || DEFAULT_PASS;
-
-  const login = useCallback((password: string) => {
-    if (password === getPassword()) {
-      setIsAuthenticated(true);
-      localStorage.setItem(AUTH_KEY, "true");
-      return true;
-    }
-    return false;
+  const login = useCallback(async (email: string, password: string) => {
+    const data = await authApi.login(email, password);
+    localStorage.setItem("jwt_token", data.token);
+    localStorage.setItem("user_email", data.email);
+    setEmail(data.email);
+    setIsAuthenticated(true);
   }, []);
 
   const logout = useCallback(() => {
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("user_email");
     setIsAuthenticated(false);
-    localStorage.removeItem(AUTH_KEY);
+    setEmail("");
   }, []);
 
-  const changePassword = useCallback((oldPass: string, newPass: string) => {
-    if (oldPass === getPassword()) {
-      localStorage.setItem(PASS_KEY, newPass);
-      return true;
-    }
-    return false;
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await authApi.changePassword(currentPassword, newPassword);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, changePassword, username: "Carmelo Curro" }}>
+    <AuthContext.Provider value={{ isAuthenticated, email, login, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -45,13 +45,13 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider>
-        <PortfolioProvider>
-          <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
+          <PortfolioProvider>
             <AppRoutes />
-          </BrowserRouter>
-        </PortfolioProvider>
-      </AuthProvider>
+          </PortfolioProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

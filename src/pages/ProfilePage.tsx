@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Mail, Shield } from "lucide-react";
 
 const ProfilePage = () => {
-  const { username } = useAuth();
+  const { email } = useAuth();
   const navigate = useNavigate();
+  const username = email.split("@")[0];
 
   return (
     <div className="min-h-screen bg-background px-4 pt-6 pb-8">
@@ -15,21 +16,19 @@ const ProfilePage = () => {
 
         <h1 className="mb-6 text-2xl font-bold text-foreground">Profile</h1>
 
-        {/* Avatar */}
         <div className="mb-8 flex flex-col items-center">
           <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-accent/20 text-2xl font-bold text-accent">
-            {username.charAt(0)}
+            {username.charAt(0).toUpperCase()}
           </div>
           <h2 className="text-xl font-bold text-foreground">{username}</h2>
           <p className="text-sm text-muted-foreground">Portfolio Owner</p>
         </div>
 
-        {/* Info Cards */}
         <div className="space-y-3">
           <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
             <User className="h-5 w-5 text-accent" />
             <div>
-              <p className="text-xs text-muted-foreground">Full Name</p>
+              <p className="text-xs text-muted-foreground">Username</p>
               <p className="font-medium text-foreground">{username}</p>
             </div>
           </div>
@@ -37,7 +36,7 @@ const ProfilePage = () => {
             <Mail className="h-5 w-5 text-accent" />
             <div>
               <p className="text-xs text-muted-foreground">Email</p>
-              <p className="font-medium text-foreground">carmelo@portfolio.app</p>
+              <p className="font-medium text-foreground">{email}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
@@ -49,10 +48,8 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => navigate("/settings")}
-          className="mt-8 w-full rounded-xl py-3 font-semibold text-foreground gradient-primary"
-        >
+        <button onClick={() => navigate("/settings")}
+          className="mt-8 w-full rounded-xl py-3 font-semibold text-foreground gradient-primary">
           Go to Settings
         </button>
       </div>

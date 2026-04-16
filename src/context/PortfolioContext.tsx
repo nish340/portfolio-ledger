@@ -1,177 +1,101 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { coinsApi, ledgerApi, portfolioApi, type CoinData, type LedgerEntry, type PortfolioSummary } from "@/lib/api";
+import { useAuth } from "./AuthContext";
 
-export interface CoinEntry {
-  id: string;
-  date: string;
-  value: number;
-  profitLoss: number;
-}
-
-export interface Coin {
-  id: string;
-  name: string;
-  symbol: string;
-  image: string | null;
-  entries: CoinEntry[];
-  createdAt: string;
-}
+export type { CoinData, LedgerEntry };
 
 interface PortfolioContextType {
-  coins: Coin[];
-  addCoin: (coin: { name: string; symbol: string; image: string | null; entries: Omit<CoinEntry, "id">[] }) => void;
-  updateCoin: (id: string, coin: Partial<Coin>) => void;
-  deleteCoin: (id: string) => void;
-  addEntry: (coinId: string, entry: Omit<CoinEntry, "id">) => void;
-  deleteEntry: (coinId: string, entryId: string) => void;
-  getTotalValue: () => number;
-  getTotalProfitLoss: () => number;
-  getTotalProfitLossPercent: () => number;
+  coins: CoinData[];
+  summary: PortfolioSummary | null;
+  loading: boolean;
+  fetchCoins: (params?: { search?: string; startDate?: string; endDate?: string }) => Promise<void>;
+  fetchSummary: () => Promise<void>;
+  addCoin: (body: Partial<CoinData>) => Promise<CoinData>;
+  updateCoin: (id: string, body: Partial<CoinData>) => Promise<CoinData>;
+  deleteCoin: (id: string) => Promise<void>;
+  addLedgerEntry: (coinId: string, body: Partial<LedgerEntry>) => Promise<LedgerEntry>;
+  updateLedgerEntry: (coinId: string, entryId: string, body: Partial<LedgerEntry>) => Promise<LedgerEntry>;
+  deleteLedgerEntry: (coinId: string, entryId: string) => Promise<void>;
+  getLedgerEntries: (coinId: string) => Promise<LedgerEntry[]>;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
 
-const STORAGE_KEY = "portfolio_coins";
-
-const loadCoins = (): Coin[] => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : getSampleData();
-  } catch {
-    return getSampleData();
-  }
-};
-
-const saveCoins = (coins: Coin[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(coins));
-};
-
-function getSampleData(): Coin[] {
-  return [
-    {
-      id: "1",
-      name: "Bitcoin",
-      symbol: "BTC",
-      image: null,
-      createdAt: "2023-11-12",
-      entries: [
-        { id: "e1", date: "2023-11-12", value: 64210.0, profitLoss: 5.2 },
-      ],
-    },
-    {
-      id: "2",
-      name: "Ethereum",
-      symbol: "ETH",
-      image: null,
-      createdAt: "2023-11-11",
-      entries: [
-        { id: "e2", date: "2023-11-11", value: 3450.12, profitLoss: -1.4 },
-      ],
-    },
-    {
-      id: "3",
-      name: "Solana",
-      symbol: "SOL",
-      image: null,
-      createdAt: "2023-11-10",
-      entries: [
-        { id: "e3", date: "2023-11-10", value: 145.82, profitLoss: 12.8 },
-      ],
-    },
-    {
-      id: "4",
-      name: "Cardano",
-      symbol: "ADA",
-      image: null,
-      createdAt: "2023-11-08",
-      entries: [
-        { id: "e4", date: "2023-11-08", value: 0.58, profitLoss: 0.0 },
-      ],
-    },
-  ];
-}
-
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [coins, setCoins] = useState<Coin[]>(loadCoins);
+  const { isAuthenticated } = useAuth();
+  const [coins, setCoins] = useState<CoinData[]>([]);
+  const [summary, setSummary] = useState<PortfolioSummary | null>(null);
+  const [loading, setLoading] = useState(false);
 
-
-  const addCoin = useCallback((coin: { name: string; symbol: string; image: string | null; entries: Omit<CoinEntry, "id">[] }) => {
-    const newCoin: Coin = {
-      ...coin,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString().split("T")[0],
-      entries: coin.entries.map((e) => ({ ...e, id: crypto.randomUUID() })),
-    };
-    setCoins((prev) => {
-      const updated = [...prev, newCoin];
-      saveCoins(updated);
-      return updated;
-    });
+  const fetchCoins = useCallback(async (params?: { search?: string; startDate?: string; endDate?: string }) => {
+    setLoading(true);
+    try {
+      const data = await coinsApi.list(params);
+      setCoins(data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const updateCoin = useCallback((id: string, updates: Partial<Coin>) => {
-    setCoins((prev) => {
-      const updated = prev.map((c) => (c.id === id ? { ...c, ...updates } : c));
-      saveCoins(updated);
-      return updated;
-    });
+  const fetchSummary = useCallback(async () => {
+    const data = await portfolioApi.summary();
+    setSummary(data);
   }, []);
 
-  const deleteCoin = useCallback((id: string) => {
-    setCoins((prev) => {
-      const updated = prev.filter((c) => c.id !== id);
-      saveCoins(updated);
-      return updated;
-    });
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCoins();
+      fetchSummary();
+    } else {
+      setCoins([]);
+      setSummary(null);
+    }
+  }, [isAuthenticated, fetchCoins, fetchSummary]);
+
+  const addCoin = useCallback(async (body: Partial<CoinData>) => {
+    const coin = await coinsApi.create(body);
+    setCoins((prev) => [coin, ...prev]);
+    fetchSummary();
+    return coin;
+  }, [fetchSummary]);
+
+  const updateCoin = useCallback(async (id: string, body: Partial<CoinData>) => {
+    const coin = await coinsApi.update(id, body);
+    setCoins((prev) => prev.map((c) => (c._id === id ? coin : c)));
+    fetchSummary();
+    return coin;
+  }, [fetchSummary]);
+
+  const deleteCoin = useCallback(async (id: string) => {
+    await coinsApi.delete(id);
+    setCoins((prev) => prev.filter((c) => c._id !== id));
+    fetchSummary();
+  }, [fetchSummary]);
+
+  const addLedgerEntry = useCallback(async (coinId: string, body: Partial<LedgerEntry>) => {
+    const entry = await ledgerApi.add(coinId, body);
+    fetchSummary();
+    return entry;
+  }, [fetchSummary]);
+
+  const updateLedgerEntry = useCallback(async (coinId: string, entryId: string, body: Partial<LedgerEntry>) => {
+    return ledgerApi.update(coinId, entryId, body);
   }, []);
 
-  const addEntry = useCallback((coinId: string, entry: Omit<CoinEntry, "id">) => {
-    setCoins((prev) => {
-      const updated = prev.map((c) =>
-        c.id === coinId
-          ? { ...c, entries: [...c.entries, { ...entry, id: crypto.randomUUID() }] }
-          : c
-      );
-      saveCoins(updated);
-      return updated;
-    });
-  }, []);
+  const deleteLedgerEntry = useCallback(async (coinId: string, entryId: string) => {
+    await ledgerApi.delete(coinId, entryId);
+    fetchSummary();
+  }, [fetchSummary]);
 
-  const deleteEntry = useCallback((coinId: string, entryId: string) => {
-    setCoins((prev) => {
-      const updated = prev.map((c) =>
-        c.id === coinId
-          ? { ...c, entries: c.entries.filter((e) => e.id !== entryId) }
-          : c
-      );
-      saveCoins(updated);
-      return updated;
-    });
-  }, []);
-
-  const getTotalValue = useCallback(() => {
-    return coins.reduce((sum, coin) => {
-      const latest = coin.entries[coin.entries.length - 1];
-      return sum + (latest?.value || 0);
-    }, 0);
-  }, [coins]);
-
-  const getTotalProfitLoss = useCallback(() => {
-    return coins.reduce((sum, coin) => {
-      const latest = coin.entries[coin.entries.length - 1];
-      return sum + (latest ? (latest.value * latest.profitLoss) / 100 : 0);
-    }, 0);
-  }, [coins]);
-
-  const getTotalProfitLossPercent = useCallback(() => {
-    const total = getTotalValue();
-    if (total === 0) return 0;
-    return (getTotalProfitLoss() / total) * 100;
-  }, [coins, getTotalValue, getTotalProfitLoss]);
+  const getLedgerEntries = useCallback((coinId: string) => ledgerApi.list(coinId), []);
 
   return (
-    <PortfolioContext.Provider
-      value={{ coins, addCoin, updateCoin, deleteCoin, addEntry, deleteEntry, getTotalValue, getTotalProfitLoss, getTotalProfitLossPercent }}
-    >
+    <PortfolioContext.Provider value={{
+      coins, summary, loading,
+      fetchCoins, fetchSummary,
+      addCoin, updateCoin, deleteCoin,
+      addLedgerEntry, updateLedgerEntry, deleteLedgerEntry, getLedgerEntries,
+    }}>
       {children}
     </PortfolioContext.Provider>
   );
