@@ -93,10 +93,6 @@ function getSampleData(): Coin[] {
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [coins, setCoins] = useState<Coin[]>(loadCoins);
 
-  const persist = useCallback((updated: Coin[]) => {
-    setCoins(updated);
-    saveCoins(updated);
-  }, []);
 
   const addCoin = useCallback((coin: { name: string; symbol: string; image: string | null; entries: Omit<CoinEntry, "id">[] }) => {
     const newCoin: Coin = {
