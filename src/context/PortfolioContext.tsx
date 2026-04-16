@@ -98,7 +98,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     saveCoins(updated);
   }, []);
 
-  const addCoin = useCallback((coin: Omit<Coin, "id" | "createdAt">) => {
+  const addCoin = useCallback((coin: { name: string; symbol: string; image: string | null; entries: Omit<CoinEntry, "id">[] }) => {
     const newCoin: Coin = {
       ...coin,
       id: crypto.randomUUID(),
