@@ -103,6 +103,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ...coin,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString().split("T")[0],
+      entries: coin.entries.map((e) => ({ ...e, id: crypto.randomUUID() })),
     };
     setCoins((prev) => {
       const updated = [...prev, newCoin];
